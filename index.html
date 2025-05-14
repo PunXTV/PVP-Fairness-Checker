@@ -54,6 +54,11 @@
       margin-bottom: 20px;
       background-color: #1a1a1a;
     }
+    .entry-group label {
+      display: block;
+      font-weight: bold;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -112,7 +117,7 @@
       tabDiv.appendChild(entryContainer);
 
       const addEntryBtn = document.createElement('button');
-      addEntryBtn.textContent = '+ Eingabefeld hinzufügen';
+      addEntryBtn.textContent = '+ Eingabe hinzufügen';
       addEntryBtn.onclick = () => addEntry(entryContainer);
       tabDiv.appendChild(addEntryBtn);
 
@@ -138,14 +143,14 @@
       group.className = 'entry-group';
 
       group.innerHTML = `
-        <label>Server Seed (offenbart):</label>
-        <input type="text" class="serverSeed">
+        <label for="serverSeed">Server Seed (offenbart)</label>
+        <input type="text" class="serverSeed" placeholder="z. B. 9f1c4e8597e9223e9f2d007f647e07c6">
 
-        <label>SHA256 Hash des Server Seeds (vor Spiel):</label>
-        <input type="text" class="serverSeedHash">
+        <label for="serverSeedHash">Server Seed SHA256 Hash</label>
+        <input type="text" class="serverSeedHash" placeholder="z. B. 03ddf499...">
 
-        <label>Start-Nonce:</label>
-        <input type="number" class="nonce" value="0" min="0">
+        <label for="nonce">Start-Nonce</label>
+        <input type="number" class="nonce" placeholder="z. B. 0" value="0" min="0">
       `;
 
       container.appendChild(group);
