@@ -70,135 +70,167 @@
   <div id="tabsContainer"></div>
 
   <script>
-    let currentTabIndex = 0;
-    let tabs = [];
+  let currentTabIndex = 0;
+  let tabs = [];
 
-    function addTab() {
-      if (tabs.length >= 50) return;
+  function addTab() {
+    if (tabs.length >= 50) return;
 
-      const tab = {
-        id: tabs.length,
-        entries: []
-      };
-      tabs.push(tab);
-      renderTabButtons();
-      switchTab(tab.id);
+    const tab = {
+      id: tabs.length,
+      entries: []
+    };
+    tabs.push(tab);
+    renderTabButtons();
+    switchTab(tab.id);
+  }
+
+  function renderTabButtons() {
+    const tabButtons = document.getElementById('tabButtons');
+    tabButtons.innerHTML = '';
+    tabs.forEach((tab, index) => {
+      const btn = document.createElement('button');
+      btn.textContent = index + 1;
+      btn.classList.toggle('active', index === currentTabIndex);
+      btn.onclick = () => switchTab(index);
+      tabButtons.appendChild(btn);
+    });
+  }
+
+  function switchTab(index) {
+    saveCurrentEntries();
+    currentTabIndex = index;
+    renderTabButtons();
+    renderTabContent();
+  }
+
+  function renderTabContent() {
+    const container = document.getElementById('tabsContainer');
+    container.innerHTML = '';
+
+    const tab = tabs[currentTabIndex];
+
+    const tabDiv = document.createElement('div');
+    tabDiv.id = 'tab-' + currentTabIndex;
+
+    const entryContainer = document.createElement('div');
+    entryContainer.id = 'entryContainer';
+    tabDiv.appendChild(entryContainer);
+
+    const addEntryBtn = document.createElement('button');
+    addEntryBtn.textContent = '+ Eingabefeld hinzufügen';
+    addEntryBtn.onclick = () => addEntry(entryContainer);
+    tabDiv.appendChild(addEntryBtn);
+
+    const verifyBtn = document.createElement('button');
+    verifyBtn.textContent = 'Ergebnisse prüfen';
+    verifyBtn.onclick = () => verifyEntries(entryContainer);
+    tabDiv.appendChild(verifyBtn);
+
+    const output = document.createElement('pre');
+    output.id = 'output';
+    tabDiv.appendChild(output);
+
+    container.appendChild(tabDiv);
+
+    if (tab.entries.length === 0) {
+      addEntry(entryContainer);
+    } else {
+      tab.entries.forEach(entry => addEntry(entryContainer, entry));
     }
+  }
 
-    function renderTabButtons() {
-      const tabButtons = document.getElementById('tabButtons');
-      tabButtons.innerHTML = '';
-      tabs.forEach((tab, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = index + 1;
-        btn.classList.toggle('active', index === currentTabIndex);
-        btn.onclick = () => switchTab(index);
-        tabButtons.appendChild(btn);
-      });
-    }
+  function addEntry(container, entry = { serverSeed: '', serverSeedHash: '', clientSeed: '', nonce: 0 }) {
+    if (container.children.length >= 6) return;
 
-    function switchTab(index) {
-      currentTabIndex = index;
-      renderTabButtons();
-      renderTabContent();
-    }
+    const group = document.createElement('div');
+    group.className = 'entry-group';
 
-    function renderTabContent() {
-      const container = document.getElementById('tabsContainer');
-      container.innerHTML = '';
+    group.innerHTML = `
+      <label>Server Seed (offenbart):</label>
+      <input type="text" class="serverSeed" value="${entry.serverSeed}">
 
-      const tab = tabs[currentTabIndex];
+      <label>SHA256 Hash des Server Seeds (vor Spiel):</label>
+      <input type="text" class="serverSeedHash" value="${entry.serverSeedHash}">
 
-      const tabDiv = document.createElement('div');
-      tabDiv.id = 'tab-' + currentTabIndex;
+      <label>Client Seed:</label>
+      <input type="text" class="clientSeed" value="${entry.clientSeed}">
 
-      const entryContainer = document.createElement('div');
-      entryContainer.id = 'entryContainer';
-      tabDiv.appendChild(entryContainer);
+      <label>Nonce:</label>
+      <input type="number" class="nonce" value="${entry.nonce}" min="0">
+    `;
 
-      const addEntryBtn = document.createElement('button');
-      addEntryBtn.textContent = '+ Eingabe hinzufügen';
-      addEntryBtn.onclick = () => addEntry(entryContainer);
-      tabDiv.appendChild(addEntryBtn);
+    container.appendChild(group);
+  }
 
-      const verifyBtn = document.createElement('button');
-      verifyBtn.textContent = 'Ergebnisse prüfen';
-      verifyBtn.onclick = () => verifyEntries(entryContainer);
-      tabDiv.appendChild(verifyBtn);
+  function saveCurrentEntries() {
+    const tab = tabs[currentTabIndex];
+    const container = document.getElementById('entryContainer');
+    if (!container) return;
 
-      const output = document.createElement('pre');
-      output.id = 'output';
-      tabDiv.appendChild(output);
+    const groups = container.querySelectorAll('.entry-group');
+    tab.entries = Array.from(groups).map(group => ({
+      serverSeed: group.querySelector('.serverSeed').value.trim(),
+      serverSeedHash: group.querySelector('.serverSeedHash').value.trim(),
+      clientSeed: group.querySelector('.clientSeed').value.trim(),
+      nonce: parseInt(group.querySelector('.nonce').value)
+    }));
+  }
 
-      container.appendChild(tabDiv);
+  async function verifyEntries(container) {
+    const output = document.getElementById('output');
+    output.textContent = '';
+    output.style.borderLeftColor = '#444';
 
-      // add initial entry
-      if (tab.entries.length === 0) addEntry(entryContainer);
-    }
+    const groups = container.querySelectorAll('.entry-group');
 
-    function addEntry(container) {
-      if (container.children.length >= 6) return;
+    for (let i = 0; i < groups.length; i++) {
+      const serverSeed = groups[i].querySelector('.serverSeed').value.trim();
+      const serverSeedHash = groups[i].querySelector('.serverSeedHash').value.trim();
+      const clientSeed = groups[i].querySelector('.clientSeed').value.trim();
+      const nonce = parseInt(groups[i].querySelector('.nonce').value);
 
-      const group = document.createElement('div');
-      group.className = 'entry-group';
-
-      group.innerHTML = `
-        <label for="serverSeed">Server Seed (offenbart)</label>
-        <input type="text" class="serverSeed" placeholder="z. B. 9f1c4e8597e9223e9f2d007f647e07c6">
-
-        <label for="serverSeedHash">Server Seed SHA256 Hash</label>
-        <input type="text" class="serverSeedHash" placeholder="z. B. 03ddf499...">
-
-        <label for="nonce">Start-Nonce</label>
-        <input type="number" class="nonce" placeholder="z. B. 0" value="0" min="0">
-      `;
-
-      container.appendChild(group);
-    }
-
-    async function verifyEntries(container) {
-      const output = document.getElementById('output');
-      output.textContent = '';
-      output.style.borderLeftColor = '#444';
-
-      const groups = container.querySelectorAll('.entry-group');
-
-      for (let i = 0; i < groups.length; i++) {
-        const serverSeed = groups[i].querySelector('.serverSeed').value.trim();
-        const serverSeedHash = groups[i].querySelector('.serverSeedHash').value.trim();
-        const nonce = parseInt(groups[i].querySelector('.nonce').value);
-
-        if (!serverSeed || !serverSeedHash || isNaN(nonce)) {
-          output.textContent += `⚠️ Eingabe ${i + 1} unvollständig oder ungültig.\n`;
-          output.style.borderLeftColor = '#ffcc00';
-          continue;
-        }
-
-        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(serverSeed));
-        const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-        if (actualHash !== serverSeedHash.toLowerCase()) {
-          output.textContent += `❌ Eingabe ${i + 1}: Hash stimmt NICHT überein!\nErwartet: ${serverSeedHash}\nTatsächlich: ${actualHash}\n\n`;
-          output.style.borderLeftColor = '#ff4444';
-          continue;
-        }
-
-        const result = await generateBoxResult(serverSeed, nonce);
-        output.textContent += `✅ Eingabe ${i + 1}: Hash korrekt\nBox (Nonce ${nonce}): ${result}\n\n`;
-        output.style.borderLeftColor = '#4CAF50';
+      if (!serverSeed || !serverSeedHash || !clientSeed || isNaN(nonce)) {
+        output.textContent += `⚠️ Eingabe ${i + 1} unvollständig oder ungültig.\n`;
+        output.style.borderLeftColor = '#ffcc00';
+        continue;
       }
-    }
 
-    async function generateBoxResult(serverSeed, nonce) {
-      const data = `${serverSeed}:${nonce}`;
-      const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
-      const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-      const roll = parseInt(hash.substring(0, 8), 16) % 10000 / 100;
-      return `${roll.toFixed(2)}%`;
-    }
+      const actualHash = await sha256(serverSeed);
+      if (actualHash !== serverSeedHash.toLowerCase()) {
+        output.textContent += `❌ Eingabe ${i + 1}: Hash stimmt NICHT überein!\nErwartet: ${serverSeedHash}\nTatsächlich: ${actualHash}\n\n`;
+        output.style.borderLeftColor = '#ff4444';
+        continue;
+      }
 
-    // Starte mit einem Tab
-    addTab();
-  </script>
+      const result = await generateResult(serverSeed, clientSeed, nonce);
+      output.textContent += `✅ Eingabe ${i + 1}: Hash korrekt\nBox (Client:Nonce → "${clientSeed}:${nonce}"): ${result}\n\n`;
+      output.style.borderLeftColor = '#4CAF50';
+    }
+  }
+
+  async function generateResult(serverSeed, clientSeed, nonce) {
+    const message = `${clientSeed}:${nonce}`;
+    const hmacKey = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(serverSeed),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const sigBuffer = await crypto.subtle.sign('HMAC', hmacKey, new TextEncoder().encode(message));
+    const hmac = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const roll = parseInt(hmac.substring(0, 8), 16) % 10000 / 100;
+    return `${roll.toFixed(2)}%`;
+  }
+
+  async function sha256(input) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  addTab();
+</script>
 </body>
 </html>
