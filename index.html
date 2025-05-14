@@ -37,63 +37,151 @@
       border: 1px solid #333;
       border-left: 5px solid #444;
     }
+    .tab-buttons {
+      margin-bottom: 20px;
+    }
+    .tab-buttons button {
+      width: auto;
+      margin-right: 5px;
+      background-color: #333;
+    }
+    .tab-buttons button.active {
+      background-color: #4CAF50;
+    }
+    .entry-group {
+      border: 1px solid #333;
+      padding: 10px;
+      margin-bottom: 20px;
+      background-color: #1a1a1a;
+    }
   </style>
 </head>
 <body>
   <h1>PvP Fairness Checker</h1>
 
-  <label for="serverSeed">Server Seed (offenbart):</label>
-  <input type="text" id="serverSeed">
+  <div class="tab-buttons" id="tabButtons"></div>
+  <button onclick="addTab()">+ Neues Fenster</button>
 
-  <label for="serverSeedHash">SHA256 Hash des Server Seeds (vor Spiel):</label>
-  <input type="text" id="serverSeedHash">
-
-  <label for="nonce">Start-Nonce:</label>
-  <input type="number" id="nonce" value="0" min="0">
-
-  <label for="boxCount">Anzahl geöffneter Boxen:</label>
-  <input type="number" id="boxCount" value="1" min="1">
-
-  <button onclick="verifyPlayers()">Ergebnisse prüfen</button>
-
-  <h2>Ergebnis</h2>
-  <pre id="output"></pre>
+  <div id="tabsContainer"></div>
 
   <script>
-    async function verifyPlayers() {
-      const serverSeed = document.getElementById('serverSeed').value.trim();
-      const serverSeedHash = document.getElementById('serverSeedHash').value.trim();
-      const boxCount = parseInt(document.getElementById('boxCount').value);
-      const nonceStart = parseInt(document.getElementById('nonce').value);
+    let currentTabIndex = 0;
+    let tabs = [];
+
+    function addTab() {
+      if (tabs.length >= 50) return;
+
+      const tab = {
+        id: tabs.length,
+        entries: []
+      };
+      tabs.push(tab);
+      renderTabButtons();
+      switchTab(tab.id);
+    }
+
+    function renderTabButtons() {
+      const tabButtons = document.getElementById('tabButtons');
+      tabButtons.innerHTML = '';
+      tabs.forEach((tab, index) => {
+        const btn = document.createElement('button');
+        btn.textContent = index + 1;
+        btn.classList.toggle('active', index === currentTabIndex);
+        btn.onclick = () => switchTab(index);
+        tabButtons.appendChild(btn);
+      });
+    }
+
+    function switchTab(index) {
+      currentTabIndex = index;
+      renderTabButtons();
+      renderTabContent();
+    }
+
+    function renderTabContent() {
+      const container = document.getElementById('tabsContainer');
+      container.innerHTML = '';
+
+      const tab = tabs[currentTabIndex];
+
+      const tabDiv = document.createElement('div');
+      tabDiv.id = 'tab-' + currentTabIndex;
+
+      const entryContainer = document.createElement('div');
+      entryContainer.id = 'entryContainer';
+      tabDiv.appendChild(entryContainer);
+
+      const addEntryBtn = document.createElement('button');
+      addEntryBtn.textContent = '+ Eingabefeld hinzufügen';
+      addEntryBtn.onclick = () => addEntry(entryContainer);
+      tabDiv.appendChild(addEntryBtn);
+
+      const verifyBtn = document.createElement('button');
+      verifyBtn.textContent = 'Ergebnisse prüfen';
+      verifyBtn.onclick = () => verifyEntries(entryContainer);
+      tabDiv.appendChild(verifyBtn);
+
+      const output = document.createElement('pre');
+      output.id = 'output';
+      tabDiv.appendChild(output);
+
+      container.appendChild(tabDiv);
+
+      // add initial entry
+      if (tab.entries.length === 0) addEntry(entryContainer);
+    }
+
+    function addEntry(container) {
+      if (container.children.length >= 6) return;
+
+      const group = document.createElement('div');
+      group.className = 'entry-group';
+
+      group.innerHTML = `
+        <label>Server Seed (offenbart):</label>
+        <input type="text" class="serverSeed">
+
+        <label>SHA256 Hash des Server Seeds (vor Spiel):</label>
+        <input type="text" class="serverSeedHash">
+
+        <label>Start-Nonce:</label>
+        <input type="number" class="nonce" value="0" min="0">
+      `;
+
+      container.appendChild(group);
+    }
+
+    async function verifyEntries(container) {
       const output = document.getElementById('output');
       output.textContent = '';
       output.style.borderLeftColor = '#444';
 
-      if (!serverSeed || !serverSeedHash || isNaN(boxCount) || boxCount < 1 || isNaN(nonceStart)) {
-        output.textContent = '⚠️ Bitte Serverdaten und Anzahl Boxen korrekt ausfüllen.';
-        output.style.borderLeftColor = '#ffcc00';
-        return;
-      }
+      const groups = container.querySelectorAll('.entry-group');
 
-      const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(serverSeed));
-      const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      for (let i = 0; i < groups.length; i++) {
+        const serverSeed = groups[i].querySelector('.serverSeed').value.trim();
+        const serverSeedHash = groups[i].querySelector('.serverSeedHash').value.trim();
+        const nonce = parseInt(groups[i].querySelector('.nonce').value);
 
-      if (actualHash !== serverSeedHash.toLowerCase()) {
-        output.textContent = '❌ Server Seed stimmt NICHT mit seinem Hash überein!\n\nErwartet: ' + serverSeedHash + '\nTatsächlich: ' + actualHash;
-        output.style.borderLeftColor = '#ff4444';
-        return;
-      }
+        if (!serverSeed || !serverSeedHash || isNaN(nonce)) {
+          output.textContent += `⚠️ Eingabe ${i + 1} unvollständig oder ungültig.\n`;
+          output.style.borderLeftColor = '#ffcc00';
+          continue;
+        }
 
-      // Ergebnis simulieren
-      let results = [];
-      for (let i = 0; i < boxCount; i++) {
-        const nonce = nonceStart + i;
+        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(serverSeed));
+        const actualHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        if (actualHash !== serverSeedHash.toLowerCase()) {
+          output.textContent += `❌ Eingabe ${i + 1}: Hash stimmt NICHT überein!\nErwartet: ${serverSeedHash}\nTatsächlich: ${actualHash}\n\n`;
+          output.style.borderLeftColor = '#ff4444';
+          continue;
+        }
+
         const result = await generateBoxResult(serverSeed, nonce);
-        results.push(`Box ${i + 1} (Nonce ${nonce}): ${result}`);
+        output.textContent += `✅ Eingabe ${i + 1}: Hash korrekt\nBox (Nonce ${nonce}): ${result}\n\n`;
+        output.style.borderLeftColor = '#4CAF50';
       }
-
-      output.textContent = '✅ Verifikation erfolgreich!\n\nErgebnisse der Boxen:' + '\n' + results.join('\n');
-      output.style.borderLeftColor = '#4CAF50';
     }
 
     async function generateBoxResult(serverSeed, nonce) {
@@ -103,6 +191,9 @@
       const roll = parseInt(hash.substring(0, 8), 16) % 10000 / 100;
       return `${roll.toFixed(2)}%`;
     }
+
+    // Starte mit einem Tab
+    addTab();
   </script>
 </body>
 </html>
