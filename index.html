@@ -37,37 +37,6 @@
       border: 1px solid #333;
       border-left: 5px solid #444;
     }
-    .player-entry {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .player-entry input {
-      flex: 1;
-    }
-    .remove-button {
-      background-color: #a94442;
-      border: none;
-      padding: 10px;
-      cursor: pointer;
-    }
-    .tab-buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .tab-buttons button {
-      background-color: #333;
-    }
-    .tab-buttons button.active {
-      background-color: #4CAF50;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
   </style>
 </head>
 <body>
@@ -85,72 +54,12 @@
   <label for="boxCount">Anzahl geöffneter Boxen:</label>
   <input type="number" id="boxCount" value="1" min="1">
 
-  <h3>Battle Gruppen (max. 50)</h3>
-  <div class="tab-buttons" id="tabs"></div>
-  <div id="tabContents"></div>
-  <button onclick="addTab()">+ Neue Gruppe hinzufügen</button>
-
   <button onclick="verifyPlayers()">Ergebnisse prüfen</button>
 
   <h2>Ergebnis</h2>
   <pre id="output"></pre>
 
   <script>
-    let currentTab = 0;
-
-    function addPlayer(tabIndex, name = '', betId = '') {
-      const playersDiv = document.getElementById(`players-${tabIndex}`);
-      const container = document.createElement('div');
-      container.className = 'player-entry';
-
-      const nameInput = document.createElement('input');
-      nameInput.placeholder = 'Spielername';
-      nameInput.value = name;
-
-      const betIdInput = document.createElement('input');
-      betIdInput.placeholder = 'Client Seed (betId)';
-      betIdInput.value = betId;
-
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = '✖';
-      removeBtn.className = 'remove-button';
-      removeBtn.onclick = () => container.remove();
-
-      container.appendChild(nameInput);
-      container.appendChild(betIdInput);
-      container.appendChild(removeBtn);
-
-      playersDiv.appendChild(container);
-    }
-
-    function addTab() {
-      const tabIndex = document.querySelectorAll('.tab-content').length;
-      if (tabIndex >= 50) return;
-
-      const tabButton = document.createElement('button');
-      tabButton.textContent = `Gruppe ${tabIndex + 1}`;
-      tabButton.onclick = () => switchTab(tabIndex);
-      tabButton.className = tabIndex === 0 ? 'active' : '';
-      document.getElementById('tabs').appendChild(tabButton);
-
-      const tabContent = document.createElement('div');
-      tabContent.id = `tab-${tabIndex}`;
-      tabContent.className = `tab-content${tabIndex === 0 ? ' active' : ''}`;
-      tabContent.innerHTML = `<div id="players-${tabIndex}"></div><button onclick="addPlayer(${tabIndex})">+ Spieler hinzufügen</button>`;
-
-      document.getElementById('tabContents').appendChild(tabContent);
-    }
-
-    function switchTab(index) {
-      currentTab = index;
-      document.querySelectorAll('.tab-buttons button').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-      });
-      document.querySelectorAll('.tab-content').forEach((content, i) => {
-        content.classList.toggle('active', i === index);
-      });
-    }
-
     async function verifyPlayers() {
       const serverSeed = document.getElementById('serverSeed').value.trim();
       const serverSeedHash = document.getElementById('serverSeedHash').value.trim();
@@ -175,62 +84,9 @@
         return;
       }
 
-      const allPlayers = Array.from(document.querySelectorAll(`#tab-${currentTab} .player-entry`));
-      if (allPlayers.length < 1) {
-        output.textContent = '⚠️ Bitte mindestens 1 Spieler hinzufügen.';
-        output.style.borderLeftColor = '#ffcc00';
-        return;
-      }
-
-      let fullOutput = '✅ Verifikation erfolgreich!\n';
-
-      for (let boxIndex = 0; boxIndex < boxCount; boxIndex++) {
-        const results = [];
-        const nonce = nonceStart + boxIndex;
-        fullOutput += `\n📦 Box #${boxIndex + 1} (Nonce ${nonce}):`;
-
-        for (const entry of allPlayers) {
-          const [nameInput, betIdInput] = entry.querySelectorAll('input');
-          const name = nameInput.value.trim();
-          const clientSeed = betIdInput.value.trim();
-          if (!name || !clientSeed) continue;
-
-          const combinedSeed = `PVP_BOX-${serverSeed}-${clientSeed}-${nonce}`;
-          const encoder = new TextEncoder();
-          const key = encoder.encode(combinedSeed);
-          const hmacKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-          const hmac = await crypto.subtle.sign("HMAC", hmacKey, key);
-          const hashHex = Array.from(new Uint8Array(hmac)).map(b => b.toString(16).padStart(2, '0')).join('');
-          const subHash = hashHex.slice(0, 13);
-          const valueFromHash = parseInt(subHash, 16);
-          const e = Math.pow(2, 52);
-          const result = Math.floor((valueFromHash / e) * 1e8);
-
-          results.push({ name, ticket: result });
-        }
-
-        results.sort((a, b) => a.ticket - b.ticket);
-        const winner = results[0];
-
-        results.forEach(r => {
-          fullOutput += `\n- ${r.name}: Ticket ${r.ticket}`;
-        });
-        fullOutput += `\n🎉 Gewinner: ${winner.name}\n`;
-      }
-
-      output.textContent = fullOutput;
+      output.textContent = '✅ Verifikation erfolgreich!\n\n(Weitere Funktionen wie Gruppenerstellung wurden entfernt.)';
       output.style.borderLeftColor = '#4CAF50';
     }
-
-    // Initialdaten
-    window.onload = () => {
-      addTab();
-      addPlayer(0, 'Shui', '1598128588');
-      addPlayer(0, 'QuBiX', '1598134242');
-      document.getElementById('serverSeedHash').value = 'ec6661823cf902836c3d126ed88f8dc60c5f464db334f64162c5a9f660808bd9';
-      document.getElementById('nonce').value = '494598569';
-      document.getElementById('boxCount').value = '2';
-    };
   </script>
 </body>
 </html>
