@@ -4,11 +4,38 @@
   <meta charset="UTF-8">
   <title>Provably Fair Prüfer</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #f9f9f9; }
-    input, button, select, textarea { padding: 10px; width: 100%; margin-top: 10px; margin-bottom: 20px; }
-    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #45a049; }
-    pre { background: #eee; padding: 10px; white-space: pre-wrap; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    input, button, select, textarea {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #333;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background: #1e1e1e;
+      padding: 10px;
+      white-space: pre-wrap;
+      border: 1px solid #333;
+    }
   </style>
 </head>
 <body>
@@ -72,7 +99,8 @@
       const e = Math.pow(2, 52);
       const result = Math.floor((valueFromHash / e) * 1e8);
 
-      output.textContent = `✅ Verifikation erfolgreich!\n\nRoll-Wert: ${result}\n\nHash überprüft: ${actualHash === serverSeedHash.toLowerCase()}`;
+      const totalTickets = 100000000;
+      output.textContent = `✅ Verifikation erfolgreich!\n\nRoll-Wert: ${result} (Ticket ${result} von ${totalTickets})\n\nHash überprüft: ${actualHash === serverSeedHash.toLowerCase()}`;
     }
   </script>
 </body>
